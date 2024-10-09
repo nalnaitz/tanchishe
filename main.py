@@ -26,11 +26,7 @@ class Snake:
         self.score_label = tk.Label(self.score_frame, text="排行榜", bg="lightgray", font=("Arial", 14))
         self.score_label.pack()
 
-        # 显示当前分数的列表框
-        # 创建加粗字体
-        self.bold_font = tkFont.Font(weight="bold")
-
-        # 使用 Text 组件替代 Listbox
+        # 显示当前分数的文本框
         self.score_text = tk.Text(self.score_frame, width=50, height=15, wrap=tk.WORD)
         self.score_text.pack(fill="both", expand=True)
         self.score_text.bind("<Double-Button-1>", self.change_grid_size)  # 双击事件绑定
@@ -52,8 +48,10 @@ class Snake:
         self.pause_button = tk.Button(self.button_frame, text="暂停游戏", command=self.pause_game, state=tk.DISABLED)
         self.pause_button.pack(side="top", pady=5)
 
-        self.restart_button = tk.Button(self.button_frame, text="重新开始", command=self.restart_game,
-                                        state=tk.DISABLED)
+        self.resume_button = tk.Button(self.button_frame, text="继续游戏", command=self.resume_game, state=tk.DISABLED)
+        self.resume_button.pack(side="top", pady=5)
+
+        self.restart_button = tk.Button(self.button_frame, text="重新开始", command=self.restart_game, state=tk.DISABLED)
         self.restart_button.pack(side="top", pady=5)
 
         # 初始化游戏数据
@@ -112,6 +110,7 @@ class Snake:
             self.game_running = True
             self.game_paused = False
             self.pause_button.config(state=tk.NORMAL)
+            self.resume_button.config(state=tk.DISABLED)  # 禁用继续游戏按钮
             self.start_button.config(state=tk.DISABLED)
             self.restart_button.config(state=tk.DISABLED)
             self.update_game()
@@ -120,7 +119,13 @@ class Snake:
         if self.game_running and not self.game_paused:
             self.game_paused = True
             self.pause_button.config(state=tk.DISABLED)
-            self.start_button.config(state=tk.NORMAL)
+            self.resume_button.config(state=tk.NORMAL)  # 启用继续游戏按钮
+
+    def resume_game(self):
+        if self.game_paused:
+            self.game_paused = False
+            self.resume_button.config(state=tk.DISABLED)  # 禁用继续游戏按钮
+            self.pause_button.config(state=tk.NORMAL)  # 启用暂停按钮
 
     def restart_game(self):
         self.snake = [(0, 0), (0, 1), (0, 2)]
@@ -131,6 +136,7 @@ class Snake:
         self.game_paused = False
         self.start_button.config(state=tk.NORMAL)
         self.pause_button.config(state=tk.DISABLED)
+        self.resume_button.config(state=tk.DISABLED)
         self.restart_button.config(state=tk.DISABLED)
 
     def update_game(self):
@@ -152,12 +158,12 @@ class Snake:
             max_y = (self.canvas_height // 20) - 1
 
             # 检查游戏是否结束
-            if new_head[0] < 0 or new_head[0] > max_x or new_head[1] < 0 or new_head[
-                1] > max_y or new_head in self.snake[:-1]:
+            if new_head[0] < 0 or new_head[0] > max_x or new_head[1] < 0 or new_head[1] > max_y or new_head in self.snake[:-1]:
                 self.game_running = False
                 messagebox.showinfo("Game Over", f"Score: {self.score}")
                 self.restart_button.config(state=tk.NORMAL)
                 self.pause_button.config(state=tk.DISABLED)
+                self.resume_button.config(state=tk.DISABLED)
                 self.update_scoreboard()
                 return
 
@@ -262,8 +268,8 @@ class Snake:
                 new_window_width = new_canvas_width + score_frame_width
                 new_window_height = new_canvas_height + button_frame_height + 20
 
-                # 先取消最大化状态
-                self.master.wm_attributes('-fullscreen', False)
+                # 取消最大化状态
+                self.master.state('normal')
 
                 # 更新画布的尺寸
                 self.canvas.config(width=new_canvas_width, height=new_canvas_height)
