@@ -29,7 +29,6 @@ class Snake:
         # 显示当前分数的文本框
         self.score_text = tk.Text(self.score_frame, width=50, height=15, wrap=tk.WORD)
         self.score_text.pack(fill="both", expand=True)
-        self.score_text.bind("<Double-Button-1>", self.change_grid_size)  # 双击事件绑定
 
         # 添加输入框让玩家输入昵称
         self.button_frame = tk.Frame(self.master)
@@ -206,13 +205,12 @@ class Snake:
         if not self.game_running and not self.game_paused:
             grid_length = self.canvas_width // 20
             grid_width = self.canvas_height // 20
-            score_entry = f"{self.name}: {self.score} "  # 移除尺寸部分
+            score_entry = f"{self.name}: {self.score} "
 
             # 在 Text 中插入名称和分数，并设置名称和分数为加粗
             self.score_text.insert(tk.END, score_entry, "bold")
 
             # 插入尺寸部分并添加下划线样式
-            size_part_index = self.score_text.index(tk.END)
             size_part = f"({grid_length} × {grid_width}) "
             self.score_text.insert(tk.END, size_part, "size_part")
 
@@ -225,64 +223,50 @@ class Snake:
             self.score_text.tag_config("size_part", underline=True)
 
             # 绑定双击事件到最新插入的尺寸部分
-            self.score_text.tag_bind("size_part", "<Double-Button-1>", self.change_grid_size)
-
-            # 绑定双击事件到每一条尺寸记录
-            self.score_text.bind("<Double-Button-1>", self.on_double_click)
+            self.score_text.tag_bind("size_part", "<Double-Button-1>", self.on_double_click)
 
     def on_double_click(self, event):
-        index = self.score_text.index("@%s,%s" % (event.x, event.y))
-        tag_ranges = self.score_text.tag_ranges("size_part")
+        """双击某条尺寸记录时，调整窗口的网格尺寸"""
+        index = self.score_text.index(f"@{event.x},{event.y}")
+        current_line = self.score_text.get(f"{index} linestart", f"{index} lineend")
 
-        for i in range(0, len(tag_ranges), 2):
-            # 转换 tag_ranges 到字符串类型以进行比较
-            start = str(tag_ranges[i])
-            end = str(tag_ranges[i + 1])
+        # 查找尺寸部分
+        try:
+            dimensions_string = current_line.split("(")[-2].strip().rstrip(')')
+            grid_length, grid_width = map(int, dimensions_string.replace('×', 'x').split('x'))
 
-            if start <= index <= end:
-                self.change_grid_size(event)
-                break
+            # 计算每个网格大小为 20 像素，得到画布的宽度和高度
+            new_canvas_width = grid_length * 20
+            new_canvas_height = grid_width * 20
 
-    def change_grid_size(self, event):
-        """双击排行榜时更改窗口的网格尺寸"""
-        if not self.game_running:
-            current_entry = self.score_text.index(tk.END)  # 获取文本末尾的索引
-            if current_entry:
-                selected_text = self.score_text.get("1.0", tk.END).strip()  # 获取所有文本
-                # 提取网格尺寸并去除多余字符
-                dimensions = selected_text.split('(')[-2].strip().rstrip(')')
-                # 处理分隔符并提取长度和宽度
-                grid_length, grid_width = map(int, dimensions.replace('×', 'x').split('x'))
+            # 获取排行榜宽度
+            score_frame_width = self.score_frame.winfo_width()
 
-                # 计算每个网格大小为 20 像素，得到画布的宽度和高度
-                new_canvas_width = grid_length * 20
-                new_canvas_height = grid_width * 20
+            # 获取按钮框架的高度
+            button_frame_height = self.button_frame.winfo_height()
 
-                # 获取排行榜宽度
-                score_frame_width = self.score_frame.winfo_width()
+            # 计算新的窗口宽度和高度
+            new_window_width = new_canvas_width + score_frame_width
+            new_window_height = new_canvas_height + button_frame_height + 20
 
-                # 获取按钮框架的高度
-                button_frame_height = self.button_frame.winfo_height()
+            # 取消最大化状态
+            self.master.state('normal')
 
-                # 计算新的窗口宽度和高度
-                new_window_width = new_canvas_width + score_frame_width
-                new_window_height = new_canvas_height + button_frame_height + 20
+            # 更新画布的尺寸
+            self.canvas.config(width=new_canvas_width, height=new_canvas_height)
 
-                # 取消最大化状态
-                self.master.state('normal')
+            # 调整窗口尺寸
+            self.master.geometry(f"{new_window_width}x{new_window_height}")
 
-                # 更新画布的尺寸
-                self.canvas.config(width=new_canvas_width, height=new_canvas_height)
+            # 更新画布宽度和高度属性
+            self.canvas_width = new_canvas_width
+            self.canvas_height = new_canvas_height
 
-                # 调整窗口尺寸
-                self.master.geometry(f"{new_window_width}x{new_window_height}")
+            # 重新绘制背景
+            self.draw_background()
 
-                # 更新画布宽度和高度属性
-                self.canvas_width = new_canvas_width
-                self.canvas_height = new_canvas_height
-
-                # 重新绘制背景
-                self.draw_background()
+        except (IndexError, ValueError):
+            messagebox.showerror("Error", "无法解析尺寸信息。")
 
     def on_key_press(self, event):
         if event.keysym == "Left" and self.direction != "Right":
